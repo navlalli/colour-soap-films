@@ -1,10 +1,12 @@
 """ IlluminatedSoapFilm class for interference calculations """
 
 import numpy as np 
+import os
 # Import colour-science package 
 import colour
 
 from decorators import timeit
+
 
 def detected_infinite(R, delta):
     """ Compute ratio of detected irradiance to the source irrdiance for an infinite
@@ -97,7 +99,6 @@ class IlluminatedSoapFilm:
         self.shape = shape
         self.wavelengths = shape.wavelengths
         self.source_sd = source_sd
-        # self.wavelengths = np.linspace(360, 830, 471)  # Wavelengths (nm)
 
     def fresnel_calc(self):
         """ Use Fresnel's formulas to return reflectance and transmittance
@@ -148,7 +149,7 @@ class IlluminatedSoapFilm:
 
     @timeit
     def interference_inf(self, thickness, polarisation="random"):
-        """ Performs interference calculations by using the interference derived 
+        """ Perform interference calculations by using the interference derived 
         for monochromatic waves at discrete wavelengths in the source with an 
         infinite number of interfering waves from a single incident lightwave
         from the source.
@@ -158,8 +159,6 @@ class IlluminatedSoapFilm:
                  irradiance specified at wavelengths = 360, 361, 362, ..., 830 nm
         thickness = thickness values to compute the inteference for, numpy array (nm)
 
-        Outputs:
-        spectral distribution of light 
         """
         # Calculate reflectivity and transmissivity
         R_perp, T_perp, R_parr, T_parr, theta_film = self.fresnel_calc()
@@ -195,6 +194,60 @@ class IlluminatedSoapFilm:
                 else:
                     raise ValueError("polarisation must be \"perp\", \"parr\" or \"random\"")
 
+    @timeit
+    def interference_inf_vectorised(self, thickness, polarisation="random"):
+        """ Perform interference calculations by using the interference derived 
+        for monochromatic waves at discrete wavelengths in the source with an 
+        infinite number of interfering waves from a single incident lightwave
+        from the source. Fully vectorised.
+
+        Inputs:
+        source = spectral distribution of the source, numpy array with spectral 
+                 irradiance specified at wavelengths = 360, 361, 362, ..., 830 nm
+        thickness = thickness values to compute the inteference for, numpy array (nm)
+
+        """
+        # Perform interference calculations by using the monochromatic relation
+        # at each wavelength at each film thickness 
+        self.nh = len(thickness)  # Number of thickness values
+        self.nw = len(self.wavelengths)  # Number of discrete wavelengths
+        # Check source has same length as the number of wavelengths
+        if len(self.source_sd) != self.nw:
+            raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
+
+        # Calculate reflectivity and transmissivity
+        R_perp, T_perp, R_parr, T_parr, theta_film = self.fresnel_calc()
+
+        h_2d = np.reshape(thickness, (self.nh, 1))
+        h_repeat = np.repeat(h_2d, self.nw, axis=1)
+        phase_shift = 4 * np.pi * self.nfilm * np.cos(theta_film) * h_repeat \
+                      / (self.wavelengths * self.nair)
+
+
+        # Coefficient of finesse used in interference calculation
+        finesse_perp = 4 * R_perp / (1 - R_perp)**2
+        finesse_parr = 4 * R_parr / (1 - R_parr)**2
+        
+        tmp_perp = finesse_perp * np.sin(phase_shift/2)**2
+        tmp_parr = finesse_parr * np.sin(phase_shift/2)**2
+
+        # If polarisation is perpendicular to plane of incidence
+        if polarisation == "perp":
+            self.Id = tmp_perp / (1 + tmp_perp) * self.source_sd
+
+        # If polarisation is parallel to plane of incidence
+        elif polarisation == "parr":
+            self.Id = tmp_parr / (1 + tmp_parr) * self.source_sd
+
+        # If light is randomly polarised
+        elif polarisation == "random":
+            Id_perp = tmp_perp / (1 + tmp_perp) * self.source_sd
+            Id_parr = tmp_parr / (1 + tmp_parr) * self.source_sd
+            self.Id = 0.5 * (Id_perp + Id_parr) * self.source_sd
+
+        else:
+            raise ValueError("polarisation must be \"perp\", \"parr\" or \"random\"")
+
 
     def convert_Id_to_XYZ(self):
         """ Convert detected spectral irradiance distribution at each wavelength
@@ -213,6 +266,27 @@ class IlluminatedSoapFilm:
             with colour.utilities.suppress_warnings(python_warnings=True):
                 XYZ = colour.sd_to_XYZ(detected_sd, cmfs, k=k)
             film_color_XYZ[count] = XYZ
+
+        return film_color_XYZ
+
+    def convert_Id_to_XYZ_vectorised(self):
+        """ Convert detected spectral irradiance distribution at each wavelength
+        to XYZ tristimulus values using vectorised functions. 
+        """
+        # Loading in colour-matching functions
+        file_dir = os.path.realpath(os.path.dirname(__file__))  # Dir of this file
+        cmfs_file = os.path.join(file_dir, "cmfs/CIE_xyz_1931_2deg.csv")
+        wave_cmfs = np.loadtxt(cmfs_file, delimiter=',')
+        cmfs_values = wave_cmfs[:, 1:]
+    
+        # Maximum spectral luminous efficacy (lm/W) - not necessary since scaling
+        # by factor alpha in conversion to sRGB colourspace. It will be used so it
+        # is explicit what k value is being used for testing purposes.
+        k = 683.002      
+
+        # Calculating the *CIE XYZ* tristimulus values for each thickness 
+        XYZ_p = 100.0 * self.Id[..., np.newaxis] * cmfs_values[np.newaxis, ...]  # 3rd dimension is X Y Z
+        film_color_XYZ = k * np.sum(XYZ_p, axis=1)  # Sum along wavelengths
 
         return film_color_XYZ
 

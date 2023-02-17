@@ -1,16 +1,21 @@
-import numpy as np
-import interference
-import colour
+""" Test calculation of reflectivity and transmissivity """
 
+import numpy as np
+import colour
+# Import from this package
+import interference
 
 def test_fresnel_calc():
-    """ Test the implementation of Fresnels equations """ 
-    # theta_air = 30 * np.pi / 180
-    # nair = 1.0
-    # nfilm = np.full(471, 1.4)
-    film = interference.IlluminatedSoapFilm(30 * np.pi / 180, 1.0, np.full(471, 1.4),
-                                            colour.SpectralShape(360, 830, 1.0),
-                                            np.ones(471))
+    """ Test the implementation of Fresnels equations and calculation of reflectivity
+    and transmissivity
+    """ 
+    theta_air = 30 * np.pi / 180
+    nair = np.full(471, 1.0)
+    nfilm = np.full(471, 1.4)
+    source_shape = colour.SpectralShape(360, 830, 1.0)
+    source_sd = np.ones(471)
+    film = interference.ColourSoapFilm(theta_air, nair, nfilm, source_shape,
+                                       source_sd)
 
     R_perp, T_perp, R_parr, T_parr, theta_film = film.fresnel_calc()
 

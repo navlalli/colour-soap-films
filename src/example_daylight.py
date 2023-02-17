@@ -36,6 +36,12 @@ def plot_thickness_colour(thickness, film_color_sRGB, title=""):
     #     fig.savefig(journal_dir + "quasicolorbar.eps", bbox_inches='tight')
     plt.show()
 
+def stat(arr, name=""):
+    """ Stast of input array """
+    print(f"{name}: {np.min(arr) = }")
+    print(f"{name}: {np.mean(arr) = }")
+    print(f"{name}: {np.max(arr) = }")
+
 def daylight_thickness_colour():
     """ Find the thickness-colour relationship for a soap film illuminated by 
     daylight.
@@ -53,95 +59,66 @@ def daylight_thickness_colour():
     # wavelengths = np.linspace(0, 1, 50)
     # spectral_values = D65.values
 
-    # Approximating daylight by the spectral distribution of an ideal black body
-    # of temperature 6500 K
-    shape = colour.SpectralShape(360, 830, 1)
-    temp = 6500  # (K)
-    source_sd = colour.sd_blackbody(temp, shape).values
-
-    h = np.linspace(0.01, 1500, 200)  # Thickness values of interest (nm)
-
-    theta_air = 37.5 * np.pi / 180  # (rads)
-    nair = 1.0
-    nfilm = 1.41
     # Create soap film
-    film = interference.IlluminatedSoapFilm(theta_air, nair, nfilm, shape, source_sd)
+    film = interference.ColourSoapFilm(theta_air, nair, nfilm, shape, source_sd)
     # Perform interference calculations
     film.interference_inf(thickness=h, polarisation="random") 
+    # stat(film.Id, "Id non-vec")
     # Convert detected spectral irradiance distribution to XYZ colourspace for 
     # each thickness
-    film_color_XYZ = film.convert_Id_to_XYZ()
-    print(f"{np.mean(film_color_XYZ) = }")
+    film.convert_Id_to_XYZ()
+    stat(film.film_color_XYZ, "XYZ non-vec")
 
     # Scaling parameter so XYZ are in interval [0, 1]
-    alpha = np.max(film_color_XYZ) / 0.8 
-
+    alpha = np.max(film.film_color_XYZ) / 0.8 
     # Conversion from XYZ to sRGB
-    film_color_sRGB = colour.XYZ_to_sRGB(film_color_XYZ / alpha)
+    film_color_sRGB = colour.XYZ_to_sRGB(film.film_color_XYZ / alpha)
     # Clipped sRGB values outside [0, 1] to 0.0 or 1.0
     film_color_sRGBclipped = np.clip(film_color_sRGB, 0.0, 1.0)
-    print(f"{np.mean(film_color_sRGBclipped) = }")
+    stat(film_color_sRGBclipped, "sRGB non-vec")
 
+    # Plot thickness-colour relationship
     plot_thickness_colour(h, film_color_sRGBclipped, "Daylight illumination")
 
 def daylight_thickness_colour_vectorised():
     """ Find the thickness-colour relationship for a soap film illuminated by 
     daylight using only vectorised functions.
     """
+    # Create soap film
+    film = interference.ColourSoapFilm(theta_air, nair, nfilm, shape, source_sd)
+    # Perform interference calculations
+    film.interference_inf_vectorised(thickness=h, polarisation="random") 
+    # stat(film.Id, "Id vec")
+    # Convert detected spectral irradiance distribution to XYZ colourspace for 
+    # each thickness
+    film.convert_Id_to_XYZ_vectorised()
+    # stat(film.film_color_XYZ, "XYZ vec")
+    # Scaling parameter so XYZ are in interval [0, 1]
+    alpha = np.max(film.film_color_XYZ) / 0.8 
+    # Convert colours to sRGB colourspace
+    film_color_sRGBclipped = film.convert_XYZ_to_sRGB_vectorised(alpha)
+    stat(film_color_sRGBclipped, "sRGB vec")
+
+    # Plot thickness-colour relationship
+    plot_thickness_colour(h, film_color_sRGBclipped, "Daylight illumination")
+
+
+if __name__ == "__main__":
+
+    # Global constants
+    theta_air = 37.5 * np.pi / 180  # (rads)
+    nair = 1.0
+    nfilm = 1.41
     # Approximating daylight by the spectral distribution of an ideal black body
     # of temperature 6500 K
     shape = colour.SpectralShape(360, 830, 1)
     temp = 6500  # (K)
     source_sd = colour.sd_blackbody(temp, shape).values
 
-    h = np.linspace(0.01, 1500, 200)  # Thickness values of interest (nm)
-
-    theta_air = 37.5 * np.pi / 180  # (rads)
-    nair = 1.0
-    nfilm = 1.41
-    # Create soap film
-    film = interference.IlluminatedSoapFilm(theta_air, nair, nfilm, shape, source_sd)
-    # Perform interference calculations
-    film.interference_inf_vectorised(thickness=h, polarisation="random") 
-    # Convert detected spectral irradiance distribution to XYZ colourspace for 
-    # each thickness
-    film_color_XYZ = film.convert_Id_to_XYZ_vectorised()
-    print(f"{np.mean(film_color_XYZ) = }")
-
-    # Scaling parameter so XYZ are in interval [0, 1]
-    alpha = np.max(film_color_XYZ) / 0.8 
-
-    # Conversion from XYZ to sRGB
-    conversion_matrix_XYZ_to_sRGB = np.array([[3.2406, -1.5372, -0.4986], [-0.9689, 1.8758, 0.0415],
-                                            [0.0557, -0.2040, 1.0570]])
-    uncorrected_sRGB = np.transpose(np.matmul(conversion_matrix_XYZ_to_sRGB, (film_color_XYZ/alpha).T))
-    film_color_linear_sRGBclipped = np.clip(uncorrected_sRGB, 0.0, 1.0)
-    # Apply gamma correction
-    film_color_sRGBclipped = np.where(film_color_linear_sRGBclipped <= 0.0031308, 
-                                      film_color_linear_sRGBclipped * 12.92,
-                                      1.055 * film_color_linear_sRGBclipped ** (1 / 2.4) - 0.055)
-    print(f"{np.min(film_color_sRGBclipped) = }")
-    print(f"{np.max(film_color_sRGBclipped) = }")
-
-    print(f"{np.mean(film_color_sRGBclipped) = }")
-
-    # The warning raised is only an issue if the below Exception is raised
-    # if np.isnan(corrected_sRGB).any():
-    #     raise Exception("corrected_sRGB contains nan")
-
-    # Conversion from XYZ to sRGB
-    # film_color_sRGB = colour.XYZ_to_sRGB(film_color_XYZ / alpha)
-    # Clipped sRGB values outside [0, 1] to 0.0 or 1.0
-    # film_color_sRGBclipped = np.clip(film_color_sRGB, 0.0, 1.0)
-
-    plot_thickness_colour(h, film_color_sRGBclipped, "Daylight illumination")
-
-
-if __name__ == "__main__":
+    # Thickness values of interest (nm)
+    h = np.linspace(0.01, 1500, 210)  
 
     # Non-vectorised
     daylight_thickness_colour()
     # Vectorised
     daylight_thickness_colour_vectorised()
-
-

@@ -86,7 +86,7 @@ def detected_infinite(R, delta):
 #
 #     return loop(N)
 
-class IlluminatedSoapFilm:
+class ColourSoapFilm:
     def __init__(self, theta_air, nair, nfilm, shape, source_sd):
         """ Properties of the air-soap-air setup
         theta_air = angle of incidence of light ray from light source (rads)
@@ -207,6 +207,9 @@ class IlluminatedSoapFilm:
         thickness = thickness values to compute the inteference for, numpy array (nm)
 
         """
+        # Calculate reflectivity and transmissivity
+        R_perp, T_perp, R_parr, T_parr, theta_film = self.fresnel_calc()
+
         # Perform interference calculations by using the monochromatic relation
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
@@ -214,9 +217,6 @@ class IlluminatedSoapFilm:
         # Check source has same length as the number of wavelengths
         if len(self.source_sd) != self.nw:
             raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
-
-        # Calculate reflectivity and transmissivity
-        R_perp, T_perp, R_parr, T_parr, theta_film = self.fresnel_calc()
 
         h_2d = np.reshape(thickness, (self.nh, 1))
         h_repeat = np.repeat(h_2d, self.nw, axis=1)
@@ -241,8 +241,8 @@ class IlluminatedSoapFilm:
 
         # If light is randomly polarised
         elif polarisation == "random":
-            Id_perp = tmp_perp / (1 + tmp_perp) * self.source_sd
-            Id_parr = tmp_parr / (1 + tmp_parr) * self.source_sd
+            Id_perp = tmp_perp / (1 + tmp_perp)
+            Id_parr = tmp_parr / (1 + tmp_parr)
             self.Id = 0.5 * (Id_perp + Id_parr) * self.source_sd
 
         else:
@@ -260,14 +260,14 @@ class IlluminatedSoapFilm:
         # is explicit what k value is being used for testing purposes.
         k = 683.002      
 
-        film_color_XYZ = np.zeros((self.nh, 3))  # cols are X, Y, Z
+        self.film_color_XYZ = np.zeros((self.nh, 3))  # cols are X, Y, Z
         for count in range(self.nh):
             detected_sd = colour.SpectralDistribution(self.Id[count], self.shape)
             with colour.utilities.suppress_warnings(python_warnings=True):
                 XYZ = colour.sd_to_XYZ(detected_sd, cmfs, k=k)
-            film_color_XYZ[count] = XYZ
+            self.film_color_XYZ[count] = XYZ
 
-        return film_color_XYZ
+        # return film_color_XYZ
 
     def convert_Id_to_XYZ_vectorised(self):
         """ Convert detected spectral irradiance distribution at each wavelength
@@ -278,17 +278,31 @@ class IlluminatedSoapFilm:
         cmfs_file = os.path.join(file_dir, "cmfs/CIE_xyz_1931_2deg.csv")
         wave_cmfs = np.loadtxt(cmfs_file, delimiter=',')
         cmfs_values = wave_cmfs[:, 1:]
-    
+
         # Maximum spectral luminous efficacy (lm/W) - not necessary since scaling
         # by factor alpha in conversion to sRGB colourspace. It will be used so it
         # is explicit what k value is being used for testing purposes.
         k = 683.002      
 
         # Calculating the *CIE XYZ* tristimulus values for each thickness 
-        XYZ_p = 100.0 * self.Id[..., np.newaxis] * cmfs_values[np.newaxis, ...]  # 3rd dimension is X Y Z
-        film_color_XYZ = k * np.sum(XYZ_p, axis=1)  # Sum along wavelengths
+        XYZ_p = self.Id[..., np.newaxis] * cmfs_values[np.newaxis, ...]  # 3rd dimension is X Y Z
+        self.film_color_XYZ = k * np.sum(XYZ_p, axis=1)  # Sum along wavelengths
 
-        return film_color_XYZ
+        # return film_color_XYZ
+
+    def convert_XYZ_to_sRGB_vectorised(self, alpha):
+        """ Convert XYZ tristimulus values to the sRGB colour space """
+        # Conversion from XYZ to sRGB
+        conversion_matrix_XYZ_to_sRGB = np.array([[3.2406, -1.5372, -0.4986], [-0.9689, 1.8758, 0.0415],
+                                                [0.0557, -0.2040, 1.0570]])
+        uncorrected_sRGB = np.transpose(np.matmul(conversion_matrix_XYZ_to_sRGB, 
+                                        (self.film_color_XYZ / alpha).T))
+        film_color_linear_sRGBclipped = np.clip(uncorrected_sRGB, 0.0, 1.0)
+        # Apply gamma correction
+        film_color_sRGBclipped = np.where(film_color_linear_sRGBclipped <= 0.0031308, 
+                                          film_color_linear_sRGBclipped * 12.92,
+                                          1.055 * film_color_linear_sRGBclipped ** (1 / 2.4) - 0.055)
+        return film_color_sRGBclipped
 
 
         

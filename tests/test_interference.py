@@ -1,5 +1,6 @@
-import interference
 import numpy as np
+import interference
+import colour
 
 
 def test_fresnel_calc():
@@ -7,7 +8,9 @@ def test_fresnel_calc():
     # theta_air = 30 * np.pi / 180
     # nair = 1.0
     # nfilm = np.full(471, 1.4)
-    film = interference.IlluminatedSoapFilm(30 * np.pi / 180, 1.0, np.full(471, 1.4))
+    film = interference.IlluminatedSoapFilm(30 * np.pi / 180, 1.0, np.full(471, 1.4),
+                                            colour.SpectralShape(360, 830, 1.0),
+                                            np.ones(471))
 
     R_perp, T_perp, R_parr, T_parr, theta_film = film.fresnel_calc()
 

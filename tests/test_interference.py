@@ -6,11 +6,12 @@ import colour
 import interference
 
 theta_air = 35 * np.pi / 180
-nair = np.full(471, 1.0)
-nfilm = np.full(471, 1.4)
 np.random.seed(50)
-source_shape = colour.SpectralShape(360, 830, 1.0)
-source_sd = np.random.rand(471) * 20e3
+source_shape = colour.SpectralShape(361, 829, 1.0)
+nw = len(source_shape.wavelengths)
+source_sd = np.random.rand(nw) * 20e3
+nair = np.full(nw, 1.0)
+nfilm = np.full(nw, 1.4)
 # Create soap film
 film = interference.ColourSoapFilm(theta_air, nair, nfilm, source_shape, source_sd)
 
@@ -36,11 +37,25 @@ def test_detected_inf():
     # Check that vectorised and non-vectorised methods return the same result
     np.testing.assert_allclose(Id_vec, Id, rtol=1e-5, atol=1e-8)
 
+def test_detected_inf_N():
+    """ Test limit of large N approaches value for N = infinity """
+    R_perp, T_perp, R_parr, T_parr, theta_film = film.fresnel_calc()
+    delta = 0.4583  # Arbitrary phase difference
+    # Perpendicular polarisation
+    Id_inf_perp = interference.detected_infinite(R_perp, delta)
+    Id_large_N_perp = interference.detected_N(R_perp, T_perp, delta, 30)
+    np.testing.assert_allclose(Id_large_N_perp, Id_inf_perp, rtol=1e-5, atol=1e-8)
+    # Parallel polarisation 
+    Id_inf_parr = interference.detected_infinite(R_parr, delta)
+    Id_large_N_parr = interference.detected_N(R_parr, T_parr, delta, 30)
+    np.testing.assert_allclose(Id_large_N_parr, Id_inf_parr, rtol=1e-5, atol=1e-8)
+
+
 def test_detected_N():
     """ Test interference calculations when specifying N """
     R_perp, T_perp, R_parr, T_parr, theta_film = film.fresnel_calc()
 
-    delta = 0.875   # Arbitrary delta value
+    delta = 0.875   # Arbitrary phase difference
 
     N = 1
     # Perpendicular polarisation

@@ -15,6 +15,7 @@ def detected_infinite(R, delta):
     F = 4 * R / (1 - R)**2
     tmp = F * np.sin(delta / 2)**2
     Id_Is = tmp / (1 + tmp)  # Id / Is
+
     return Id_Is
 
 def detected_N(R, T, delta, N):
@@ -41,41 +42,17 @@ def detected_N(R, T, delta, N):
 
     return Id_Is
 
-    # if check:
-    #     detected_loop_N4 = loop(4)
-    #     detected_loop_N5 = loop(5)
-    #
-    #     # From manually expanding equation
-    #     detected_N4 =  R * (1 - 2 * T * (np.cos(delta) + R * np.cos(2 * delta)
-    #                     + R**2 * np.cos(3 * delta))
-    #                     + T**2 * (1 + 2 * R * np.cos(delta) + 2 * R**2 * np.cos(2 * delta)
-    #                              + R**2 + 2 * R**3 * np.cos(delta) + R**4 ))
-    #
-    #
-    #     detected_N5 = R * (1 - 2 * T * (np.cos(delta) + R * np.cos(2 * delta)
-    #                     + R**2 * np.cos(3 * delta) + R**3 * np.cos(4 * delta))
-    #                     + T**2 * (1 + 2 * R * np.cos(delta) + 2 * R**2 * np.cos(2 * delta)
-    #                              + 2 * R**3 * np.cos(3 * delta) + R**2 + 
-    #                              + 2 * R**3 * np.cos(delta) + R**4 + 2 * R**4 * np.cos(2 * delta)
-    #                              + 2 * R**5 * np.cos(delta) + R**6))
-    #
-    #     print(f"N = 4: {detected_loop_N4 = :.8f} and {detected_N4 = :.8f}")        
-    #     print(f"N = 5: {detected_loop_N5 = :.8f} and {detected_N5 = :.8f}")        
-    #     np.testing.assert_allclose(detected_loop_N4, detected_N4, rtol=0.0, atol=1e-12)
-    #     np.testing.assert_allclose(detected_loop_N5, detected_N5, rtol=0.0, atol=1e-12)
-    #     print("Loop verified")
-    #
-    # return loop(N)
-
 class ColourSoapFilm:
     def __init__(self, theta_air, nair, nfilm, shape, source_sd):
         """ Properties of the air-soap-air setup
         theta_air = angle of incidence of light ray from light source (rads)
         nair = absolute index of refraction of air 
         nfilm = absolute index of refraction of film 
+        shape = colour.SpectralShape() from colour-science package
         source_sd = spectral distribution of the source, numpy array with spectral 
                  irradiance specified at wavelengths = 360, 361, 362, ..., 830 nm
         """
+
         self.theta_air = theta_air
         self.nair = nair
         self.nfilm = nfilm
@@ -83,6 +60,10 @@ class ColourSoapFilm:
         self.wavelengths = shape.wavelengths
         self.source_sd = source_sd
         self.nw = len(self.wavelengths)  # Number of discrete wavelengths
+        # Check source has same length as the number of wavelengths
+        if len(source_sd) != self.nw:
+            raise Exception("source_sd should have same length as nw:"
+                            f" {len(source_sd) = } and {self.nw = }")
 
     def fresnel_calc(self):
         """ Use Fresnel's formulas to return reflectance and transmittance
@@ -149,9 +130,9 @@ class ColourSoapFilm:
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
         # self.nw = len(self.wavelengths)  # Number of discrete wavelengths
-        # Check source has same length as the number of wavelengths
-        if len(self.source_sd) != self.nw:
-            raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
+        # # Check source has same length as the number of wavelengths
+        # if len(self.source_sd) != self.nw:
+        #     raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
 
         self.Id = np.zeros((self.nh, self.nw))
         for ind_h, h in enumerate(thickness):
@@ -185,8 +166,7 @@ class ColourSoapFilm:
         from the source. Fully vectorised.
 
         Inputs:
-        source = spectral distribution of the source, numpy array with spectral 
-                 irradiance specified at wavelengths = 360, 361, 362, ..., 830 nm
+        source = spectral distribution of the source, numpy array
         thickness = thickness values to compute the inteference for, numpy array (nm)
 
         """
@@ -196,10 +176,6 @@ class ColourSoapFilm:
         # Perform interference calculations by using the monochromatic relation
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
-        # self.nw = len(self.wavelengths)  # Number of discrete wavelengths
-        # Check source has same length as the number of wavelengths
-        if len(self.source_sd) != self.nw:
-            raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
 
         h_2d = np.reshape(thickness, (self.nh, 1))
         h_repeat = np.repeat(h_2d, self.nw, axis=1)
@@ -250,9 +226,9 @@ class ColourSoapFilm:
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
         # self.nw = len(self.wavelengths)  # Number of discrete wavelengths
-        # Check source has same length as the number of wavelengths
-        if len(self.source_sd) != self.nw:
-            raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
+        # # Check source has same length as the number of wavelengths
+        # if len(self.source_sd) != self.nw:
+        #     raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
 
         self.Id = np.zeros((self.nh, self.nw))
         for ind_h, h in enumerate(thickness):
@@ -304,7 +280,12 @@ class ColourSoapFilm:
     def convert_Id_to_XYZ_vectorised(self):
         """ Convert detected spectral irradiance distribution at each wavelength
         to XYZ tristimulus values using vectorised functions. 
+        Requires the source_sd to be specified at wavelengths = 360, 361, ..., 830 nm
+        as the cmfs used are at 1 nm intervals for 360 to 830 nm.
         """
+        # Check source is specified at the correct wavelengths
+        np.testing.assert_equal(self.wavelengths, np.linspace(360, 830, 471),
+                                err_msg="Specify source_sd at wavelengths = 360, 361, ..., 830 nm")
         # Loading in colour-matching functions
         file_dir = os.path.realpath(os.path.dirname(__file__))  # Dir of this file
         cmfs_file = os.path.join(file_dir, "cmfs/CIE_xyz_1931_2deg.csv")

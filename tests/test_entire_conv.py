@@ -8,11 +8,12 @@ import colour
 import interference
 
 theta_air = 35 * np.pi / 180
-nair = np.full(471, 1.0)
-nfilm = np.full(471, 1.4)
 np.random.seed(22590)
 source_shape = colour.SpectralShape(360, 830, 1.0)
 source_sd = colour.sd_blackbody(4300, source_shape).values
+nw = len(source_sd)
+nair = np.full(nw, 1.0)
+nfilm = np.full(nw, 1.4)
 # Create soap film
 
 def test_conv():

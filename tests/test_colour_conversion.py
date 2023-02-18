@@ -8,11 +8,12 @@ import colour
 import interference
 
 theta_air = 35 * np.pi / 180
-nair = np.full(471, 1.0)
-nfilm = np.full(471, 1.4)
 np.random.seed(22590)
 source_shape = colour.SpectralShape(360, 830, 1.0)
-source_sd = np.random.rand(471) * 20e3
+nw = len(source_shape.wavelengths)
+source_sd = np.random.rand(nw) * 20e3
+nair = np.full(nw, 1.0)
+nfilm = np.full(nw, 1.4)
 # Create soap film
 film = interference.ColourSoapFilm(theta_air, nair, nfilm, source_shape, source_sd)
 film.nh = 100

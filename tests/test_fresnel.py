@@ -10,10 +10,11 @@ def test_fresnel_calc():
     and transmissivity
     """ 
     theta_air = 30 * np.pi / 180
-    nair = np.full(471, 1.0)
-    nfilm = np.full(471, 1.4)
     source_shape = colour.SpectralShape(360, 830, 1.0)
-    source_sd = np.ones(471)
+    nw = len(source_shape.wavelengths)
+    source_sd = np.ones(nw)
+    nair = np.full(nw, 1.0)
+    nfilm = np.full(nw, 1.4)
     film = interference.ColourSoapFilm(theta_air, nair, nfilm, source_shape,
                                        source_sd)
 

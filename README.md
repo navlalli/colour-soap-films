@@ -1,8 +1,15 @@
+<div align="center">
+
+![License](https://img.shields.io/github/license/navlalli/colour-soap-films?color=%2307aaeb&label=License&style=for-the-badge)
+![Last commit](https://img.shields.io/github/last-commit/navlalli/colour-soap-films?style=for-the-badge)
+
+</div>
+
 # The colour of soap films
 
 This project shows how the colours exhibited by an illuminated soap film can be found by applying an interference relation derived for monochromatic waves at discrete wavelengths in the source. [Coherence effects on the colour of soap films]() provides a discussion of this method and its expected range of validity. All variables and equations implemented in `src/interference.py` are detailed in [coherence effects on the colour of soap films]().
 
-Any of the example codes in `src` may be run with the following conda environment:
+Any of the example codes in `src` may be run using `python` with the following conda environment:
 ```
 conda create -n soap-film numpy matplotlib
 conda activate soap-film

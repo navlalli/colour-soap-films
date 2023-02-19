@@ -46,7 +46,7 @@ For a source with spectral distribution composed of the sum of two Gaussian dist
 
 | Source | Colour-thickness |
 | :---: | :---: |
-| $\overline{\lambda} \in \{440, 550\}$ nm | $\overline{\lambda} \in \{440, 550\}$ nm |
+| $\overline{\lambda} \in \lbrace 440, 550 \rbrace$ nm | $\overline{\lambda} \in \lbrace 440, 550 \rbrace$ nm |
 | ![Sourced comprised of the sum of two Gaussians, centred at 440 and 550 nm](./img/source_double_gaussian_440_550nm.svg) | ![Sourced comprised of the sum of two Gaussians, centred at 440 and 550 nm](./img/thickness_colour_double_gaussian_440_550nm.svg) |
 
 

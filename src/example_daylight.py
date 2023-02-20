@@ -1,25 +1,22 @@
 """ Calculate colours of a soap film illuminated by daylight """
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 # Import colour-science package 
 import colour 
 
 # Import from this package
-import sys
-sys.path.append("/home/nav/navScripts/colour-soap-films/src/")
 import interference
 import plot_utils
 
-# Import speed of light
-from scipy.constants import c 
+def thickness_colour(save=0):
+    """ Find the thickness-colour relationship for daylight: randomly polarised
+    light with N = infinity.
 
-def thickness_colour():
-    """ Find the thickness-colour relationship for daylight: randomly polarised light with
-    N = inf.
+    Mixture of vectorised and non-vectorised functions used.
 
-    Mixture of vectorised and non-vectorised functions
+    Inputs:
+    save = boolean for deciding whether to save plot 
+
     """
     # Create soap film
     film = interference.ColourSoapFilm(theta_air, nair, nfilm, shape, source_sd)
@@ -35,7 +32,7 @@ def thickness_colour():
     film_colour_sRGBclipped = film.convert_XYZ_to_sRGB_vectorised(alpha)
 
     # Plot thickness-colour relationship
-    plot_utils.plot_thickness_colour(h, film_colour_sRGBclipped, "daylight", save=0)
+    plot_utils.plot_thickness_colour(h, film_colour_sRGBclipped, "daylight", save=save)
 
 if __name__ == "__main__":
 
@@ -47,14 +44,15 @@ if __name__ == "__main__":
     wavelengths = shape.wavelengths
     source_sd = D65.values
     nw = len(source_sd)  # Number of discrete wavelengths in the source_sd
+    # Absolute indices of refraction
     nair = np.full(nw, 1.003)
     nfilm = np.linspace(1.42, 1.40, nw)  # Arbitrary
 
     # Check out the source
     plot_utils.plot_source(shape.wavelengths, source_sd, "daylight", save=0)
 
-    h = np.linspace(0.001, 1000, 500)  # Thickness values of interest (nm)
+    h = np.linspace(0.001, 1000, 1000)  # Thickness values of interest (nm)
  
     # Find variation of colour with thickness for daylight illumination
-    thickness_colour()
+    thickness_colour(save=0)
 

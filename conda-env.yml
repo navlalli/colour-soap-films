@@ -1,4 +1,4 @@
-name: soap-film-test
+name: soap-film
 channels:
   - defaults
 dependencies:

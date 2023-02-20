@@ -134,28 +134,33 @@ class ColourSoapFilm:
         self.nh = len(thickness)  # Number of thickness values
         self.Id = np.zeros((self.nh, self.nw))
         for ind_h, h in enumerate(thickness):
-            for ind_w, wavelength in enumerate(self.wavelengths):
-                delta = 4 * np.pi * h * self.nfilm[ind_w] * np.cos(theta_film[ind_w]) \
-                        / (wavelength * self.nair[ind_w])  # (rads)
+            # Calculate phase difference at a given film thickness
+            delta = 4 * np.pi * h * self.nfilm * np.cos(theta_film) \
+                    / (self.wavelengths * self.nair)  # (rads)
 
+            for ind_w in range(self.nw):
                 # If polarisation is perpendicular to plane of incidence
                 if polarisation == "perp":
-                    self.Id[ind_h, ind_w] = detected_infinite(R_perp[ind_w], delta) \
+                    self.Id[ind_h, ind_w] = detected_infinite(
+                                            R_perp[ind_w], delta[ind_w]) \
                                             * self.source_sd[ind_w]
 
                 # If polarisation is parallel to plane of incidence
                 elif polarisation == "parr":
-                    self.Id[ind_h, ind_w] = detected_infinite(R_parr[ind_w], delta) \
+                    self.Id[ind_h, ind_w] = detected_infinite(
+                                            R_parr[ind_w], delta[ind_w]) \
                                             * self.source_sd[ind_w]
 
                 # If light is randomly polarised
                 elif polarisation == "random":
-                    Id_perp = detected_infinite(R_perp[ind_w], delta)
-                    Id_parr = detected_infinite(R_parr[ind_w], delta)
-                    self.Id[ind_h, ind_w] = 0.5 * (Id_perp + Id_parr) * self.source_sd[ind_w]
+                    Id_perp = detected_infinite(R_perp[ind_w], delta[ind_w])
+                    Id_parr = detected_infinite(R_parr[ind_w], delta[ind_w])
+                    self.Id[ind_h, ind_w] = 0.5 * (Id_perp + Id_parr) \
+                                            * self.source_sd[ind_w]
 
                 else:
-                    raise ValueError("polarisation must be \"perp\", \"parr\" or \"random\"")
+                    raise ValueError("polarisation must be \"perp\", \"parr\""
+                                     " or \"random\"")
 
         return self.Id
 
@@ -228,24 +233,27 @@ class ColourSoapFilm:
         self.nh = len(thickness)  # Number of thickness values
         self.Id = np.zeros((self.nh, self.nw))
         for ind_h, h in enumerate(thickness):
-            for ind_w, wavelength in enumerate(self.wavelengths):
-                delta = 4 * np.pi * h * self.nfilm[ind_w] * np.cos(theta_film[ind_w]) \
-                        / (wavelength * self.nair[ind_w])  # (rads)
+            # Calculate phase difference at a given film thickness
+            delta = 4 * np.pi * h * self.nfilm * np.cos(theta_film) \
+                    / (self.wavelengths * self.nair)  # (rads)
 
+            for ind_w in range(self.nw):
                 # If polarisation is perpendicular to plane of incidence
                 if polarisation == "perp":
-                    self.Id[ind_h, ind_w] = detected_N(R_perp[ind_w], T_perp[ind_w],
-                                                       delta, N) * self.source_sd[ind_w]
+                    self.Id[ind_h, ind_w] = detected_N(
+                                            R_perp[ind_w], T_perp[ind_w],
+                                            delta[ind_w], N) * self.source_sd[ind_w]
 
                 # If polarisation is parallel to plane of incidence
                 elif polarisation == "parr":
-                    self.Id[ind_h, ind_w] = detected_N(R_parr[ind_w], T_parr[ind_w],
-                                                       delta, N) * self.source_sd[ind_w]
+                    self.Id[ind_h, ind_w] = detected_N(
+                                            R_parr[ind_w], T_parr[ind_w],
+                                            delta[ind_w], N) * self.source_sd[ind_w]
 
                 # If light is randomly polarised
                 elif polarisation == "random":
-                    Id_perp = detected_N(R_perp[ind_w], T_perp[ind_w], delta, N)
-                    Id_parr = detected_N(R_parr[ind_w], T_parr[ind_w], delta, N)
+                    Id_perp = detected_N(R_perp[ind_w], T_perp[ind_w], delta[ind_w], N)
+                    Id_parr = detected_N(R_parr[ind_w], T_parr[ind_w], delta[ind_w], N)
                     self.Id[ind_h, ind_w] = 0.5 * (Id_perp + Id_parr) * self.source_sd[ind_w]
 
                 else:
@@ -280,8 +288,10 @@ class ColourSoapFilm:
         as the cmfs used are at 1 nm intervals for 360 to 830 nm.
         """
         # Check source is specified at the correct wavelengths
+        msg = "Specify source_sd at wavelengths = 360, 361, ..., 830 nm"
         np.testing.assert_equal(self.wavelengths, np.linspace(360, 830, 471),
-                                err_msg="Specify source_sd at wavelengths = 360, 361, ..., 830 nm")
+                                err_msg=msg)
+
         # Loading in colour-matching functions
         file_dir = os.path.realpath(os.path.dirname(__file__))  # Dir of this file
         cmfs_file = os.path.join(file_dir, "cmfs/CIE_xyz_1931_2deg.csv")
@@ -293,7 +303,7 @@ class ColourSoapFilm:
         k = 683.002      
 
         # Calculating the *CIE XYZ* tristimulus values for each thickness 
-        XYZ_p = self.Id[..., np.newaxis] * cmfs_values[np.newaxis, ...]  # 3rd dimension is X Y Z
+        XYZ_p = self.Id[..., np.newaxis] * cmfs_values[np.newaxis, ...]
         self.film_colour_XYZ = k * np.sum(XYZ_p, axis=1)  # Sum along wavelengths
 
         return self.film_colour_XYZ
@@ -319,7 +329,8 @@ class ColourSoapFilm:
 
         # Apply gamma correction
         film_colour_sRGBclipped = np.where(film_colour_linear_sRGBclipped <= 0.0031308, 
-                                          film_colour_linear_sRGBclipped * 12.92,
-                                          1.055 * film_colour_linear_sRGBclipped ** (1 / 2.4) - 0.055)
+                                           film_colour_linear_sRGBclipped * 12.92,
+                                           1.055 * film_colour_linear_sRGBclipped 
+                                           ** (1 / 2.4) - 0.055)
 
         return film_colour_sRGBclipped

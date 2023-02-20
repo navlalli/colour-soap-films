@@ -9,11 +9,15 @@
 
 This project shows how the colours exhibited by an illuminated soap film can be found by applying an interference relation derived for monochromatic waves at discrete wavelengths in the source. [Coherence effects on the colour of soap films]() provides a discussion of this method and its expected range of validity. All variables and equations implemented in `src/interference.py` are detailed in [coherence effects on the colour of soap films]().
 
-Any of the example codes in `src` may be run using `python` with the following conda environment:
+The examples in [`src`](src) may be run using `python` with a conda environment created from [environment.yml](environment.yml):
 ```
-conda create -n soap-film numpy matplotlib
+conda env create -f environment.yml
+```
+For example, this conda environment can be used to run [`src/example_daylight.py`](src/example_daylight.py):
+```
 conda activate soap-film
-pip install colour-science
+cd src
+python example_daylight.py
 ```
 
 ## Examples

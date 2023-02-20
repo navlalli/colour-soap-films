@@ -14,6 +14,8 @@ The examples in [`src`](src) may be run using `python` with a conda environment 
 conda env create -f conda-env.yml
 ```
 
+All tests in [`tests`](tests) can be checked by running `pytest` from the command line.
+
 ## Examples
 
 ### Blackbody radiator

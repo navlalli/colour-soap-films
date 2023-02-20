@@ -1,16 +1,20 @@
-""" IlluminatedSoapFilm class for interference calculations """
+""" ColourSoapFilm class for interference and colour calculations """
 
 import numpy as np 
 import os
 # Import colour-science package 
 import colour
 
+# Import decorator for timing functions
 from decorators import timeit
-
 
 def detected_infinite(R, delta):
     """ Compute ratio of detected irradiance to the source irradiance for an infinite
     number of interfering monochromatic waves.
+
+    Inputs:
+    R = reflectivity of the film 
+    delta = phase shift between each successive wave reaching the detector (rads)
     """
     F = 4 * R / (1 - R)**2
     tmp = F * np.sin(delta / 2)**2
@@ -44,20 +48,18 @@ def detected_N(R, T, delta, N):
 
 class ColourSoapFilm:
     def __init__(self, theta_air, nair, nfilm, shape, source_sd):
-        """ Properties of the air-soap-air setup
-        theta_air = angle of incidence of light ray from light source (rads)
+        """ Properties of the illuminated air-soap film-air setup
+        theta_air = angle of incidence of a light ray from the light source (rads)
         nair = absolute index of refraction of air 
-        nfilm = absolute index of refraction of film 
+        nfilm = absolute index of refraction of the soap film 
         shape = colour.SpectralShape() from colour-science package
-        source_sd = spectral distribution of the source, numpy array with spectral 
-                 irradiance specified at wavelengths = 360, 361, 362, ..., 830 nm
+        source_sd = spectral distribution of the source
         """
-
         self.theta_air = theta_air
         self.nair = nair
         self.nfilm = nfilm
         self.shape = shape
-        self.wavelengths = shape.wavelengths
+        self.wavelengths = shape.wavelengths  # Wavelengths (nm)
         self.source_sd = source_sd
         self.nw = len(self.wavelengths)  # Number of discrete wavelengths
         # Check source has same length as the number of wavelengths
@@ -66,7 +68,8 @@ class ColourSoapFilm:
                             f" {len(source_sd) = } and {self.nw = }")
 
     def fresnel_calc(self):
-        """ Use Fresnel's formulas to return reflectance and transmittance
+        """ Use Fresnel's formulas to return the reflectance and transmittance
+        of the film 
 
         Outputs:
         R_perp = reflectivity for light polarised perpendicular to the plane of 
@@ -107,20 +110,20 @@ class ColourSoapFilm:
         # Reflectivity and transmissivity
         R_parr = r_parr**2
 
-        T_parr = (self.nfilm * np.cos(theta_film)) \
-                 / (self.nair * np.cos(self.theta_air)) * t_parr**2
+        T_parr = (self.nfilm * np.cos(theta_film)) / (self.nair * np.cos(self.theta_air)) * t_parr**2
 
         return R_perp, T_perp, R_parr, T_parr, theta_film
 
     @timeit
     def interference_inf(self, thickness, polarisation="random"):
-        """ Perform interference calculations by using the interference derived 
-        for monochromatic waves at discrete wavelengths in the source with an 
-        infinite number of interfering waves from a single incident lightwave
-        from the source.
+        """ Perform interference calculations using the interference equation
+        derived for monochromatic waves at discrete wavelengths in the source.
+        An infinite number of interfering waves from a single incident lightwave
+        from the source is considered.
 
         Inputs:
-        thickness = thickness values to compute the inteference for, numpy array (nm)
+        thickness = thickness values of interest, numpy array (nm)
+        polarisation = polarisation of light from the source, str
 
         """
         # Calculate reflectivity and transmissivity
@@ -129,11 +132,6 @@ class ColourSoapFilm:
         # Perform interference calculations by using the monochromatic relation
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
-        # self.nw = len(self.wavelengths)  # Number of discrete wavelengths
-        # # Check source has same length as the number of wavelengths
-        # if len(self.source_sd) != self.nw:
-        #     raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
-
         self.Id = np.zeros((self.nh, self.nw))
         for ind_h, h in enumerate(thickness):
             for ind_w, wavelength in enumerate(self.wavelengths):
@@ -142,11 +140,13 @@ class ColourSoapFilm:
 
                 # If polarisation is perpendicular to plane of incidence
                 if polarisation == "perp":
-                    self.Id[ind_h, ind_w] = detected_infinite(R_perp[ind_w], delta) * self.source_sd[ind_w]
+                    self.Id[ind_h, ind_w] = detected_infinite(R_perp[ind_w], delta) \
+                                            * self.source_sd[ind_w]
 
                 # If polarisation is parallel to plane of incidence
                 elif polarisation == "parr":
-                    self.Id[ind_h, ind_w] = detected_infinite(R_parr[ind_w], delta) * self.source_sd[ind_w]
+                    self.Id[ind_h, ind_w] = detected_infinite(R_parr[ind_w], delta) \
+                                            * self.source_sd[ind_w]
 
                 # If light is randomly polarised
                 elif polarisation == "random":
@@ -156,18 +156,19 @@ class ColourSoapFilm:
 
                 else:
                     raise ValueError("polarisation must be \"perp\", \"parr\" or \"random\"")
+
         return self.Id
 
     @timeit
     def interference_inf_vectorised(self, thickness, polarisation="random"):
-        """ Perform interference calculations by using the interference derived 
-        for monochromatic waves at discrete wavelengths in the source with an 
-        infinite number of interfering waves from a single incident lightwave
-        from the source. Fully vectorised.
+        """ Perform interference calculations using the interference equation
+        derived for monochromatic waves at discrete wavelengths in the source.
+        An infinite number of interfering waves from a single incident lightwave
+        from the source is considered and a fully vectorised approach is used.
 
         Inputs:
-        source = spectral distribution of the source, numpy array
-        thickness = thickness values to compute the inteference for, numpy array (nm)
+        thickness = thickness values of interest, numpy array (nm)
+        polarisation = polarisation of light from the source, str
 
         """
         # Calculate reflectivity and transmissivity
@@ -176,19 +177,17 @@ class ColourSoapFilm:
         # Perform interference calculations by using the monochromatic relation
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
-
         h_2d = np.reshape(thickness, (self.nh, 1))
         h_repeat = np.repeat(h_2d, self.nw, axis=1)
-        phase_shift = 4 * np.pi * self.nfilm * np.cos(theta_film) * h_repeat \
-                      / (self.wavelengths * self.nair)
+        delta = 4 * np.pi * h_repeat * self.nfilm * np.cos(theta_film) \
+                / (self.wavelengths * self.nair)
 
-
-        # Coefficient of finesse used in interference calculation
+        # Coefficient of finesse used in interference calculations
         finesse_perp = 4 * R_perp / (1 - R_perp)**2
         finesse_parr = 4 * R_parr / (1 - R_parr)**2
         
-        tmp_perp = finesse_perp * np.sin(phase_shift/2)**2
-        tmp_parr = finesse_parr * np.sin(phase_shift/2)**2
+        tmp_perp = finesse_perp * np.sin(delta/2)**2
+        tmp_parr = finesse_parr * np.sin(delta/2)**2
 
         # If polarisation is perpendicular to plane of incidence
         if polarisation == "perp":
@@ -211,12 +210,14 @@ class ColourSoapFilm:
 
     @timeit
     def interference_N(self, thickness, N, polarisation="random"):
-        """ Perform interference calculations by using the interference derived 
-        for monochromatic waves at discrete wavelengths in the source with N 
-        interfering waves from a single incident lightwave from the source.
+        """ Perform interference calculations by using the interference equation
+        derived for monochromatic waves at discrete wavelengths in the source 
+        for N interfering waves from a single incident lightwave from the source.
 
         Inputs:
-        thickness = thickness values to compute the inteference for, numpy array (nm)
+        thickness = thickness values of interest, numpy array (nm)
+        N = number of interfering waves
+        polarisation = polarisation of light from the source, str
 
         """
         # Calculate reflectivity and transmissivity
@@ -225,11 +226,6 @@ class ColourSoapFilm:
         # Perform interference calculations by using the monochromatic relation
         # at each wavelength at each film thickness 
         self.nh = len(thickness)  # Number of thickness values
-        # self.nw = len(self.wavelengths)  # Number of discrete wavelengths
-        # # Check source has same length as the number of wavelengths
-        # if len(self.source_sd) != self.nw:
-        #     raise Exception(f"{len(self.source_sd) = } and {self.nw = }: they should be the same")
-
         self.Id = np.zeros((self.nh, self.nw))
         for ind_h, h in enumerate(thickness):
             for ind_w, wavelength in enumerate(self.wavelengths):
@@ -258,14 +254,14 @@ class ColourSoapFilm:
         return self.Id
 
     def convert_Id_to_XYZ(self):
-        """ Convert detected spectral irradiance distribution at each wavelength
+        """ Convert detected spectral irradiance distribution at each thickness
         to XYZ tristimulus values. 
         """
         # Load colour-matching functions
         cmfs = colour.MSDS_CMFS['CIE 1931 2 Degree Standard Observer']
         # Maximum spectral luminous efficacy (lm/W) - not necessary since scaling
-        # by factor alpha in conversion to sRGB colourspace. It will be used so it
-        # is explicit what k value is being used for testing purposes.
+        # by factor alpha in conversion to sRGB colourspace. It is used for testing
+        # purposes
         k = 683.002      
 
         self.film_colour_XYZ = np.zeros((self.nh, 3))  # cols are X, Y, Z
@@ -278,7 +274,7 @@ class ColourSoapFilm:
         return self.film_colour_XYZ
 
     def convert_Id_to_XYZ_vectorised(self):
-        """ Convert detected spectral irradiance distribution at each wavelength
+        """ Convert detected spectral irradiance distribution at each thickness
         to XYZ tristimulus values using vectorised functions. 
         Requires the source_sd to be specified at wavelengths = 360, 361, ..., 830 nm
         as the cmfs used are at 1 nm intervals for 360 to 830 nm.
@@ -292,8 +288,8 @@ class ColourSoapFilm:
         wave_cmfs = np.loadtxt(cmfs_file, delimiter=',')
         cmfs_values = wave_cmfs[:, 1:]
         # Maximum spectral luminous efficacy (lm/W) - not necessary since scaling
-        # by factor alpha in conversion to sRGB colourspace. It will be used so it
-        # is explicit what k value is being used for testing purposes.
+        # by factor alpha in conversion to sRGB colourspace. It is used for testing
+        # purposes
         k = 683.002      
 
         # Calculating the *CIE XYZ* tristimulus values for each thickness 
@@ -303,10 +299,17 @@ class ColourSoapFilm:
         return self.film_colour_XYZ
 
     def convert_XYZ_to_sRGB_vectorised(self, alpha=1.0):
-        """ Convert XYZ tristimulus values to the sRGB colour space """
+        """ Convert XYZ tristimulus values to the sRGB colour space using vectorised
+        functions
+
+        Inputs:
+        alpha = scaling factor to ensure X, Y and Z values are in the interval [0, 1]
+        
+        """
         # Conversion from XYZ to sRGB
-        conversion_matrix_XYZ_to_sRGB = np.array([[3.2406, -1.5372, -0.4986], [-0.9689, 1.8758, 0.0415],
-                                                [0.0557, -0.2040, 1.0570]])
+        conversion_matrix_XYZ_to_sRGB = np.array([[3.2406, -1.5372, -0.4986],
+                                                  [-0.9689, 1.8758, 0.0415],
+                                                  [0.0557, -0.2040, 1.0570]])
 
         uncorrected_sRGB = np.transpose(np.matmul(conversion_matrix_XYZ_to_sRGB, 
                                         (self.film_colour_XYZ / alpha).T))

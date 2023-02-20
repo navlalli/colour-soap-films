@@ -261,6 +261,7 @@ class ColourSoapFilm:
 
         return self.Id
 
+    @timeit
     def convert_Id_to_XYZ(self):
         """ Convert detected spectral irradiance distribution at each thickness
         to XYZ tristimulus values. 
@@ -281,6 +282,7 @@ class ColourSoapFilm:
 
         return self.film_colour_XYZ
 
+    @timeit
     def convert_Id_to_XYZ_vectorised(self):
         """ Convert detected spectral irradiance distribution at each thickness
         to XYZ tristimulus values using vectorised functions. 
@@ -308,6 +310,7 @@ class ColourSoapFilm:
 
         return self.film_colour_XYZ
 
+    @timeit
     def convert_XYZ_to_sRGB_vectorised(self, alpha=1.0):
         """ Convert XYZ tristimulus values to the sRGB colour space using vectorised
         functions

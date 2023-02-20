@@ -6,7 +6,7 @@ def timeit(func):
         start_time = time.time()
         output = func(*args, **kwargs)
         end_time = time.time()
-        print(f"Function {func.__name__}() took {end_time - start_time:.2f} s to execute")
+        print(f"{func.__name__}() --> {end_time - start_time:.2f} s execution time")
         return output
     return wrapper
 

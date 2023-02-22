@@ -1,7 +1,8 @@
 <div align="center">
 
-![License](https://img.shields.io/github/license/navlalli/colour-soap-films?color=%2307aaeb&label=License&style=for-the-badge)
-![Last commit](https://img.shields.io/github/last-commit/navlalli/colour-soap-films?style=for-the-badge)
+![License](https://img.shields.io/github/license/navlalli/colour-soap-films?color=d611d0&label=License)
+[![DOI](https://zenodo.org/badge/600866116.svg)](https://zenodo.org/badge/latestdoi/600866116)
+![Last commit](https://img.shields.io/github/last-commit/navlalli/colour-soap-films?label=Last%20commit)
 
 </div>
 

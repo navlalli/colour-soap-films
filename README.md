@@ -8,7 +8,7 @@
 
 # The colour of soap films
 
-This project shows how the colours exhibited by an illuminated soap film can be found by applying an interference relation derived for monochromatic waves at discrete wavelengths in the source. [Coherence effects on the colour of soap films]() provides a discussion of this method and its expected range of validity. All variables and equations implemented in [`src/interference.py`](src/interference.py) are detailed in [Coherence effects on the colour of soap films]().
+This project shows how the colours exhibited by an illuminated soap film can be found by applying an interference relation derived for monochromatic waves at discrete wavelengths in the source. [Coherence effects on the colour of soap films]() (submitted for publication) provides a discussion of this method and its expected range of validity. All variables and equations implemented in [`src/interference.py`](src/interference.py) are detailed in [Coherence effects on the colour of soap films]().
 
 The examples in [`src`](src) may be run using `python` with a conda environment created from [`conda-env.yml`](conda-env.yml):
 ```

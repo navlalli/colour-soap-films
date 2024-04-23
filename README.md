@@ -55,7 +55,7 @@ For a light source with spectral distribution composed of the sum of two Gaussia
 | Source | Colour-thickness |
 | :---: | :---: |
 | $\overline{\lambda} \in \lbrace 440, 550 \rbrace$ nm | $\overline{\lambda} \in \lbrace 440, 550 \rbrace$ nm |
-| ![Sourced comprised of the sum of two Gaussians, centred at 440 and 550 nm](img/source_double_gaussian_440_550nm.svg) | ![Sourced comprised of the sum of two Gaussians, centred at 440 and 550 nm](img/thickness_colour_double_gaussian_440_550nm.svg) |
+| ![Sourced comprised of the sum of two Gaussians, centred at 440 and 550 nm](https://github.com/navlalli/colour-soap-films/blob/main/img/source_double_gaussian_440_550nm.svg) | ![Sourced comprised of the sum of two Gaussians, centred at 440 and 550 nm](https://github.com/navlalli/colour-soap-films/blob/main/img/thickness_colour_double_gaussian_440_550nm.svg) |
 
 ## Journal articles
 An adapted version of this code was used in [The stability of magnetic soap films](https://doi.org/10.1063/5.0146164).
